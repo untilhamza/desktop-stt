@@ -1,9 +1,46 @@
-const { app, BrowserWindow } = require("electron");
-const CoreAudio = require("node-core-audio");
+const { app, BrowserWindow, desktopCapturer, ipcMain } = require("electron");
 const url = require("url");
 const path = require("path");
+// In the main process.
 
-let mainWindow;
+console.log(desktopCapturer);
+
+const tryCapture = async () => {};
+
+const getSystemAudioNoMic = async () => {
+  const sources = await desktopCapturer.getSources({
+    types: ["window", "screen", "audio", "video"],
+  });
+
+  console.log(sources);
+
+  const audioSource = sources.find((source) => {
+    return source.name === "Electron";
+  });
+
+  console.log(audioSource);
+
+  return audioSource;
+};
+
+ipcMain.on("GET_SOURCE", (event, arg) => {
+  console.log(arg);
+
+  desktopCapturer
+    .getSources({ types: ["window", "screen"] })
+    .then(async (sources) => {
+      for (const source of sources) {
+        if (source.name === "Entire Screen") {
+          console.log(source);
+          mainWindow.webContents.send("SET_SOURCE", source.id);
+          return;
+        }
+      }
+    });
+
+  // Event emitter for sending asynchronous messages
+  // event.sender.send("SET_SOURCE", "async pong");
+});
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -14,17 +51,19 @@ function createWindow() {
     },
   });
 
-  const engine = new CoreAudio.AudioEngine();
-  const input = engine.createDuplexStream(
-    (inputChannels, outputChannels, callback) => {
-      // Process audio data here
-      // ...
-
-      callback(null, outputChannels);
-    }
-  );
-
-  input.start();
+  // setTimeout(() => {
+  //   desktopCapturer
+  //     .getSources({ types: ["window", "screen"] })
+  //     .then(async (sources) => {
+  //       for (const source of sources) {
+  //         console.log(JSON.stringify(source));
+  //         if (source.name === "Electron") {
+  //           mainWindow.webContents.send("SET_SOURCE", source.id);
+  //           return;
+  //         }
+  //       }
+  //     });
+  // }, 1000);
 
   mainWindow.loadURL(
     url.format({

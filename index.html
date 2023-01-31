@@ -6,8 +6,10 @@
   </head>
 
   <body>
-    <h1>Hello World!</h1>
+    <h1>Hello World!!** ß</h1>
     We are using node
+    <video />
+    <audio />
     <script>
       document.write(process.versions.node);
     </script>
@@ -19,6 +21,88 @@
     <script>
       document.write(process.versions.electron);
     </script>
-    .
+    <script>
+      // In the preload script.
+      const { ipcRenderer } = require("electron");
+      console.log(ipcRenderer);
+      ipcRenderer.on("SET_SOURCE", async (event, sourceId) => {
+        console.log("sourceId: " + sourceId);
+
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            audio: false,
+            video: {
+              mandatory: {
+                chromeMediaSource: "desktop",
+                chromeMediaSourceId: sourceId,
+                minWidth: 1280,
+                maxWidth: 1280,
+                minHeight: 720,
+                maxHeight: 720,
+              },
+            },
+          });
+          handleStream(stream);
+        } catch (e) {
+          handleError(e);
+        }
+      });
+
+      function handleStream(stream) {
+        console.log(stream);
+        const video = document.querySelector("video");
+        video.srcObject = stream;
+        video.onloadedmetadata = (e) => video.play();
+
+        //play stream
+        // const mediaRecorder = new MediaRecorder(stream);
+        // mediaRecorder.start();
+        // mediaRecorder.ondataavailable = (e) => {
+        //   console.log(e.data);
+        // };
+      }
+
+      function handleError(e) {
+        console.log(e);
+      }
+
+      // Async message handler
+      ipcRenderer.on("asynchronous-reply", (event, arg) => {
+        console.log(arg);
+      });
+
+      // Async message sender
+      ipcRenderer.send("GET_SOURCE", "ping from html file");
+    </script>
+    <!-- <script>
+      desktopCapturer.getSources(
+        { types: ["window", "screen"] },
+        (error, sources) => {
+          if (error) throw error;
+          for (let i = 0; i < sources.length; ++i) {
+            if (sources[i].name === "Electron") {
+              navigator.webkitGetUserMedia(
+                {
+                  audio: false,
+                  video: {
+                    mandatory: {
+                      chromeMediaSource: "desktop",
+                      chromeMediaSourceId: sources[i].id,
+                      minWidth: 1280,
+                      maxWidth: 1280,
+                      minHeight: 720,
+                      maxHeight: 720,
+                    },
+                  },
+                },
+                handleStream,
+                handleError
+              );
+              return;
+            }
+          }
+        }
+      );
+    </script> -->
   </body>
 </html>
