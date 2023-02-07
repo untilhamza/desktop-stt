@@ -23,6 +23,21 @@
       ></video>
     </div>
 
+    <!-- canvas -->
+    <div style="border: 1px solid red; width: 640px; height: 720px">
+      <canvas id="canvas" width="640" height="720"></canvas>
+    </div>
+
+    <!-- cropped video -->
+    <div style="border: 1px solid red; width: 640px; height: 720px">
+      <video
+        id="cropped-video"
+        autoplay
+        playsinline
+        muted
+        style="width: 640px; height: 720px"
+      ></video>
+
     <audio />
     <script>
       document.write(process.versions.node);
@@ -99,12 +114,42 @@
       function handleStream(stream) {
         console.log("stream", stream);
         const video = document.querySelector("video");
+        const canvas = document.querySelector("#canvas");
         video.srcObject = stream;
-        video.onloadedmetadata = (e) => video.play();
+        video.onloadedmetadata = (e) => {video.play()
+        canvas.width=500;
+      canvas.height=500;
+    };
+        //TODO: Crop stream
+        const audioTrack = stream.getAudioTracks()[0];
+        //const canvas = document.createElement("canvas");
+      
+        const ctx = canvas.getContext("2d");
+        // canvas.width = video.videoWidth / 2; //1280;
+        // canvas.height = video.videoHeight/2; //720;
 
-        //play stream
-        const mediaRecorder = new MediaRecorder(stream);
-        mediaRecorder.start();
+        const draw = () => {
+         // ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          //  setTimeout(draw, 1000 / 30);
+          ctx.drawImage(video, 80,0,480,500,0,0,500,520);
+          requestAnimationFrame(draw);
+        };
+
+        draw();
+
+        const croppedStream = new MediaStream([audioTrack]);
+        croppedStream.addTrack(canvas.captureStream().getVideoTracks()[0]);
+
+
+        //show cropped video
+        const croppedVideo = document.querySelector("#cropped-video");
+        croppedVideo.srcObject = croppedStream;
+        croppedVideo.onloadedmetadata = (e) => croppedVideo.play();
+
+
+        //TODO: Record stream
+        const mediaRecorder = new MediaRecorder(croppedStream);
+       // mediaRecorder.start();
         let recordedBlobs = [];
         mediaRecorder.ondataavailable = (e) => {
           console.log("media data", e.data);
