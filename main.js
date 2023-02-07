@@ -3,8 +3,6 @@ const url = require("url");
 const path = require("path");
 // In the main process.
 
-console.log(desktopCapturer);
-
 const tryCapture = async () => {};
 
 const getSystemAudioNoMic = async () => {
@@ -29,17 +27,20 @@ ipcMain.on("GET_SOURCE", (event, arg) => {
   desktopCapturer
     .getSources({ types: ["window", "screen"] })
     .then(async (sources) => {
+      console.log(sources);
       for (const source of sources) {
-        if (source.name === "Entire Screen") {
+        if (source.name === "Screen 2") {
           console.log(source);
           mainWindow.webContents.send("SET_SOURCE", source.id);
+
           return;
         }
       }
     });
+  //startRecord();
 
   // Event emitter for sending asynchronous messages
-  // event.sender.send("SET_SOURCE", "async pong");
+  event.sender.send("SET_SOURCE", "screen:1:0");
 });
 
 function createWindow() {
@@ -72,6 +73,9 @@ function createWindow() {
       slashes: true,
     })
   );
+
+  //show developer tools
+  mainWindow.webContents.openDevTools();
 }
 
 app.on("ready", createWindow);

@@ -6,9 +6,22 @@
   </head>
 
   <body>
-    <h1>Hello World!!** ß</h1>
+    <h1>Hello World!!** test</h1>
     We are using node
-    <video />
+    <div>
+      <button id="start">Start</button>
+      <button id="stop">Stop</button>
+    </div>
+    <!-- put red border and make video element seen -->
+    <div style="border: 1px solid red; width: 1280px; height: 720px">
+      <video
+        id="video"
+        autoplay
+        playsinline
+        style="width: 1280px; height: 720px"
+      ></video>
+    </div>
+
     <audio />
     <script>
       document.write(process.versions.node);
@@ -21,12 +34,34 @@
     <script>
       document.write(process.versions.electron);
     </script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+    <!-- <script src="/socket.io/socket.io.js"></script> -->
+    <script type="module">
+      // import { io } from "https://cdn.socket.io/4.4.1/socket.io.esm.min.js";
+      // const SOCKET_ADDRESS = "http://localhost:3005";
+      // const socket = io.connect(SOCKET_ADDRESS);
+      // socket.on("connect", () => {
+      //   console.log("connected to server");
+      // });
+
+      // socket.on("disconnect", () => {
+      //   console.log("disconnected from server");
+      // });
+
+      // socket.on("message", (data) => {
+      //   console.log(data);
+      // });
+
+      // socket.on("error", (error) => {
+      //   console.log(error);
+      //});
+    </script>
     <script>
-      // In the preload script.
+      //In the preload script.
       const { ipcRenderer } = require("electron");
       console.log(ipcRenderer);
       ipcRenderer.on("SET_SOURCE", async (event, sourceId) => {
-        console.log("sourceId: " + sourceId);
+        console.log("** sourceId: " + sourceId);
 
         try {
           const stream = await navigator.mediaDevices.getUserMedia({
@@ -49,17 +84,33 @@
       });
 
       function handleStream(stream) {
-        console.log(stream);
+        console.log("stream", stream);
         const video = document.querySelector("video");
         video.srcObject = stream;
         video.onloadedmetadata = (e) => video.play();
 
         //play stream
-        // const mediaRecorder = new MediaRecorder(stream);
-        // mediaRecorder.start();
-        // mediaRecorder.ondataavailable = (e) => {
-        //   console.log(e.data);
-        // };
+        const mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder.start();
+        let recordedBlobs = [];
+        mediaRecorder.ondataavailable = (e) => {
+          console.log("media data", e.data);
+          recordedBlobs.push(e.data);
+        };
+        setTimeout(() => {
+          mediaRecorder.stop();
+        }, 10000);
+        mediaRecorder.onstop = (e) => {
+          console.log("recording stopped");
+          const blob = new Blob(recordedBlobs, { type: "video/webm" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.style.display = "none";
+          a.href = url;
+          a.download = "recorded-stream.webm";
+          document.body.appendChild(a);
+          a.click();
+        };
       }
 
       function handleError(e) {
@@ -68,41 +119,11 @@
 
       // Async message handler
       ipcRenderer.on("asynchronous-reply", (event, arg) => {
-        console.log(arg);
+        console.log("asynchronous-reply ", arg);
       });
 
       // Async message sender
-      ipcRenderer.send("GET_SOURCE", "ping from html file");
+      ipcRenderer.send("GET_SOURCE", "ping to main from primary html file");
     </script>
-    <!-- <script>
-      desktopCapturer.getSources(
-        { types: ["window", "screen"] },
-        (error, sources) => {
-          if (error) throw error;
-          for (let i = 0; i < sources.length; ++i) {
-            if (sources[i].name === "Electron") {
-              navigator.webkitGetUserMedia(
-                {
-                  audio: false,
-                  video: {
-                    mandatory: {
-                      chromeMediaSource: "desktop",
-                      chromeMediaSourceId: sources[i].id,
-                      minWidth: 1280,
-                      maxWidth: 1280,
-                      minHeight: 720,
-                      maxHeight: 720,
-                    },
-                  },
-                },
-                handleStream,
-                handleError
-              );
-              return;
-            }
-          }
-        }
-      );
-    </script> -->
   </body>
 </html>
