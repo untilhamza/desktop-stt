@@ -18,6 +18,7 @@
         id="video"
         autoplay
         playsinline
+        muted
         style="width: 1280px; height: 720px"
       ></video>
     </div>
@@ -65,7 +66,19 @@
 
         try {
           const stream = await navigator.mediaDevices.getUserMedia({
-            audio: false,
+            audio: {
+              mandatory: {
+                chromeMediaSource: "desktop",
+                chromeMediaSourceId: sourceId,
+                echoCancellation: true,
+                googAutoGainControl: true,
+                googNoiseSuppression: true,
+                googHighpassFilter: true,
+                googAudioMirroring: true,
+              },
+              optional: [],
+            },
+
             video: {
               mandatory: {
                 chromeMediaSource: "desktop",
@@ -99,7 +112,8 @@
         };
         setTimeout(() => {
           mediaRecorder.stop();
-        }, 10000);
+        }, 30000);
+
         mediaRecorder.onstop = (e) => {
           console.log("recording stopped");
           const blob = new Blob(recordedBlobs, { type: "video/webm" });
