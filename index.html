@@ -213,8 +213,7 @@
         }, 60000);
 
         mediaRecorder.onstop = (e) => {
-          //cancelAnimationFrame(requestAnimationFrameId);
-          clearInterval(timeIntervalId);
+          cancelAnimationFrame(requestAnimationFrameId);
           console.log("recording stopped");
           const blob = new Blob(recordedBlobs, { type: "video/webm" });
 
