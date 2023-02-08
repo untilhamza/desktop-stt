@@ -51,6 +51,8 @@
       document.write(process.versions.electron);
     </script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+
+   <script src="https://cdn.jsdelivr.net/npm/axios@1.1.2/dist/axios.min.js"></script>
     <!-- <script src="/socket.io/socket.io.js"></script> -->
     <script type="module">
       // import { io } from "https://cdn.socket.io/4.4.1/socket.io.esm.min.js";
@@ -72,8 +74,11 @@
       //   console.log(error);
       //});
     </script>
-    <script>
+    <script type="module">
       //In the preload script.
+   //  import axios from 'axios';
+    //  const axios = require('axios'); // legacy way
+      console.log(axios);
       const { ipcRenderer } = require("electron");
       console.log(ipcRenderer);
       const stopButton = document.getElementById("stop");
@@ -124,15 +129,19 @@
       });
 
       function handleStream(stream) {
-        console.log("stream", stream);
-        const video =  document.querySelector("video"); // document.createElement('video');
+         //const serverIpAddress = 'localhost';// "10.20.171.95";
+        const video =  document.querySelector("video"); //
         const canvas = document.querySelector("#canvas");
+
+       let requestAnimationFrameId = null;
+
         video.srcObject = stream;
 
         video.onloadedmetadata = (e) => {
-          video.play()
-         canvas.width= video.videoWidth / 2; //500;
-         canvas.height=video.videoHeight/2; //500;
+         video.play()
+         //TODO: set based on captureRect
+         canvas.width= 800;  //video.videoWidth / 2; //500;
+         canvas.height= 800; //video.videoHeight/2; //500;
     };
 
     video.onloadeddata = () => {
@@ -145,6 +154,7 @@
         // canvas.height = video.videoHeight/2; //720;
 
         const draw = () => {
+          console.log('drawing..')
          // ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
           //  setTimeout(draw, 1000 / 30);
           //ctx.drawImage(video, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight)
@@ -152,52 +162,78 @@
           //sy - The y coordinate where to start clipping ->  captureRect.y
           //sWidth - The width of the clipped image (how much it clips on width) -> captureRect.width
           //sHeight - The height of the clipped image (how much it clips on height) -> captureRect.height
+
           //dx - The x coordinate where to place the image on the canvas
           //dy - The y coordinate where to place the image on the canvas
+
           //dWidth - [optional]The width of the image to use (stretch or reduce the image)
           //dHeight -[optional] The height of the image to use (stretch or reduce the image)
-          ctx.drawImage(video, 0,0,480,500,0,0,500,520);
-          requestAnimationFrame(draw);
+          ctx.drawImage(video, 10,10,800,800,0,0,800,800);
+         requestAnimationFrameId = requestAnimationFrame(draw);
+
         };
 
+        //TODO: Draw cropped video frame on canvas
         draw();
 
+        //TODO: Or crop video on server side
+        
+
+        //Add audio to cropped video stream
         const croppedStream = new MediaStream([audioTrack]);
         croppedStream.addTrack(canvas.captureStream().getVideoTracks()[0]);
 
 
-        //show cropped video
-        const croppedVideo = document.querySelector("#cropped-video");
-        croppedVideo.srcObject = croppedStream;
-        croppedVideo.width = 480;
-        croppedVideo.height = 500;
-        croppedVideo.onloadedmetadata = (e) => croppedVideo.play();
+        //Show cropped video -test
+        // const croppedVideo = document.querySelector("#cropped-video");
+        // croppedVideo.srcObject = croppedStream;
+        // croppedVideo.width = 480;
+        // croppedVideo.height = 500;
+        // croppedVideo.onloadedmetadata = (e) => croppedVideo.play();
 
 
         //TODO: Record stream
-        const mediaRecorder = new MediaRecorder(croppedStream);
-       mediaRecorder.start();
+      const mediaRecorder = new MediaRecorder(croppedStream);
+        //const mediaRecorder = new MediaRecorder(stream);
+
+        //TODO: record stream 
+        mediaRecorder.start();
+
         let recordedBlobs = [];
+
         mediaRecorder.ondataavailable = (e) => {
           console.log("media data", e.data);
           recordedBlobs.push(e.data);
         };
+
         setTimeout(() => {
           mediaRecorder.stop();
-        }, 30000);
+          cancelAnimationFrame(requestAnimationFrameId);
+          //TODO: stop the stream  from user media
+        }, 60000);
 
         mediaRecorder.onstop = (e) => {
+          //cancelAnimationFrame(requestAnimationFrameId);
+          clearInterval(timeIntervalId);
           console.log("recording stopped");
           const blob = new Blob(recordedBlobs, { type: "video/webm" });
 
-          //TODO: send to iframe
+          //TODO: send to iframe for uploading to s3
           //window.parent.postMessage({ type: "upload to s3" blob }, "*");
+
+          //TODO: Or send base64 to server for cropping
+          // const reader = new FileReader();
+          // reader.readAsDataURL(blob);
+          // reader.onload = ()=>{
+          //   const base64data = reader.result;
+          //  // console.log("base64data", base64data);
+          // }
 
           const url = URL.createObjectURL(blob);
           const a = document.createElement("a");
           a.style.display = "none";
           a.href = url;
-          a.download = "recorded-stream.webm";
+          a.download = "recorded-stream"+ new Date().toISOString() + ".webm";
           document.body.appendChild(a);
           a.click();
         };
