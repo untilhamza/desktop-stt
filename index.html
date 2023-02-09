@@ -83,7 +83,7 @@
       console.log(ipcRenderer);
       const stopButton = document.getElementById("stop");
       const startButton = document.getElementById("start");
-
+      let intervalId = null;
       startButton.addEventListener("click", () => {
         //ipcRenderer.send("START"); //get source ID
       });
@@ -130,8 +130,17 @@
 
       function handleStream(stream) {
          //const serverIpAddress = 'localhost';// "10.20.171.95";
-        const video =  document.querySelector("video"); //
-        const canvas = document.querySelector("#canvas");
+      //   const video = document.querySelector("video"); //
+      //   video.style.display = "none";
+      //  const canvas = document.querySelector("#canvas");
+      //   canvas.style.display = "none";
+
+        const video = document.createElement('video');
+        video.muted = true;
+        video.autoplay = true;
+        video.playsinline = true;
+        video.style.display = "none";
+        const canvas = document.createElement('canvas')
 
        let requestAnimationFrameId = null;
 
@@ -169,12 +178,15 @@
           //dWidth - [optional]The width of the image to use (stretch or reduce the image)
           //dHeight -[optional] The height of the image to use (stretch or reduce the image)
           ctx.drawImage(video, 10,10,800,800,0,0,800,800);
-         requestAnimationFrameId = requestAnimationFrame(draw);
+        // requestAnimationFrameId = requestAnimationFrame(draw);
+
+       
 
         };
 
         //TODO: Draw cropped video frame on canvas
-        draw();
+       // draw();
+         intervalId =  setInterval(draw, 1000 / 30);  //30 fps
 
         //TODO: Or crop video on server side
         
@@ -208,9 +220,10 @@
 
         setTimeout(() => {
           mediaRecorder.stop();
-          cancelAnimationFrame(requestAnimationFrameId);
+         // cancelAnimationFrame(requestAnimationFrameId);
+          clearInterval(intervalId);
           //TODO: stop the stream  from user media
-        }, 60000);
+        }, 30000);
 
         mediaRecorder.onstop = (e) => {
           cancelAnimationFrame(requestAnimationFrameId);
