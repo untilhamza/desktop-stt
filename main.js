@@ -3,6 +3,9 @@ const url = require("url");
 const path = require("path");
 // In the main process.
 
+//log temp directory
+console.log(app.getPath("temp"));
+
 const tryCapture = async () => {};
 
 const getSystemAudioNoMic = async () => {
@@ -40,7 +43,10 @@ ipcMain.on("GET_SOURCE", (event, arg) => {
   //startRecord();
 
   // Event emitter for sending asynchronous messages
-  event.sender.send("SET_SOURCE", "screen:1:0");
+  event.sender.send("SET_SOURCE", {
+    sourceId: "screen:1:0",
+    videoPath: app.getPath("temp"),
+  });
 });
 
 function createWindow() {

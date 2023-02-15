@@ -49,6 +49,7 @@
     , and Electron
     <script>
       document.write(process.versions.electron);
+   
     </script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
 
@@ -79,7 +80,8 @@
    //  import axios from 'axios';
     //  const axios = require('axios'); // legacy way
       console.log(axios);
-      const { ipcRenderer } = require("electron");
+      const { ipcRenderer , app} = require("electron");
+     
       console.log(ipcRenderer);
       const stopButton = document.getElementById("stop");
       const startButton = document.getElementById("start");
@@ -93,24 +95,24 @@
        // stop video stream
       });
 
-      ipcRenderer.on("SET_SOURCE", async (event, sourceId) => {
+      ipcRenderer.on("SET_SOURCE", async (event, {sourceId, videoPath}) => {
         console.log("** sourceId: " + sourceId);
 
         try {
           const stream = await navigator.mediaDevices.getUserMedia({
-            audio: {
-              mandatory: {
-                chromeMediaSource: "desktop",
-                chromeMediaSourceId: sourceId,
-                echoCancellation: true,
-                googAutoGainControl: true,
-                googNoiseSuppression: true,
-                googHighpassFilter: true,
-                googAudioMirroring: true,
-              },
-              optional: [],
-            },
-
+            // audio: {
+            //   mandatory: {
+            //     chromeMediaSource: "desktop",
+            //     chromeMediaSourceId: sourceId,
+            //     echoCancellation: true,
+            //     googAutoGainControl: true,
+            //     googNoiseSuppression: true,
+            //     googHighpassFilter: true,
+            //     googAudioMirroring: true,
+            //   },
+            //   optional: [],
+            // },
+            audio:false,
             video: {
               mandatory: {
                 chromeMediaSource: "desktop",
@@ -122,25 +124,27 @@
               },
             },
           });
-          handleStream(stream);
+          handleStream(stream, videoPath);
         } catch (e) {
           handleError(e);
         }
       });
 
-      function handleStream(stream) {
+      function handleStream(stream, videoPath) {
+        const storagePath = videoPath+"/storage_stream"+ new Date().toISOString() + ".webm"
+        const storage_stream = require("fs").createWriteStream(storagePath);
          //const serverIpAddress = 'localhost';// "10.20.171.95";
-      //   const video = document.querySelector("video"); //
+       const video = document.querySelector("video"); //
       //   video.style.display = "none";
-      //  const canvas = document.querySelector("#canvas");
+      const canvas = document.querySelector("#canvas");
       //   canvas.style.display = "none";
-
-        const video = document.createElement('video');
-        video.muted = true;
-        video.autoplay = true;
-        video.playsinline = true;
-        video.style.display = "none";
-        const canvas = document.createElement('canvas')
+       const blob_reader = new FileReader();
+        // const video = document.createElement('video');
+        // video.muted = true;
+        // video.autoplay = true;
+        // video.playsinline = true;
+        // video.style.display = "none";
+        // const canvas = document.createElement('canvas')
 
        let requestAnimationFrameId = null;
 
@@ -192,7 +196,7 @@
         
 
         //Add audio to cropped video stream
-        const croppedStream = new MediaStream([audioTrack]);
+        const croppedStream = new MediaStream();
         croppedStream.addTrack(canvas.captureStream().getVideoTracks()[0]);
 
 
@@ -202,30 +206,41 @@
         // croppedVideo.width = 480;
         // croppedVideo.height = 500;
         // croppedVideo.onloadedmetadata = (e) => croppedVideo.play();
+     
 
+       
 
         //TODO: Record stream
       const mediaRecorder = new MediaRecorder(croppedStream);
+         const blob_reader = new FileReader();
         //const mediaRecorder = new MediaRecorder(stream);
 
         //TODO: record stream 
         mediaRecorder.start();
 
         let recordedBlobs = [];
-
-        mediaRecorder.ondataavailable = (e) => {
-          console.log("media data", e.data);
-          recordedBlobs.push(e.data);
+         
+        mediaRecorder.ondataavailable = (ev) => {
+          if(blob_reader.readyState != 1) blob_reader.readAsArrayBuffer(ev.data);
+          else recordedBlobs.push(ev.data);
         };
 
-        setTimeout(() => {
+         blob_reader.addEventListener("load", ev => {
+        storage_stream.write(Buffer.from(ev.currentTarget.result));
+        if(recordedBlobs.length) ev.currentTarget.readAsArrayBuffer(recordedBlobs.shift());
+        });
+
+       const id =  setTimeout(() => {
           mediaRecorder.stop();
          // cancelAnimationFrame(requestAnimationFrameId);
           clearInterval(intervalId);
           //TODO: stop the stream  from user media
-        }, 30000);
+        }, 10000);
+
+        console.log('set time out id', id)
 
         mediaRecorder.onstop = (e) => {
+          console.log('stopping..')
           cancelAnimationFrame(requestAnimationFrameId);
           console.log("recording stopped");
           const blob = new Blob(recordedBlobs, { type: "video/webm" });
@@ -241,13 +256,13 @@
           //  // console.log("base64data", base64data);
           // }
 
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.style.display = "none";
-          a.href = url;
-          a.download = "recorded-stream"+ new Date().toISOString() + ".webm";
-          document.body.appendChild(a);
-          a.click();
+          // const url = URL.createObjectURL(blob);
+          // const a = document.createElement("a");
+          // a.style.display = "none";
+          // a.href = url;
+          // a.download = "recorded-stream"+ new Date().toISOString() + ".webm";
+          // document.body.appendChild(a);
+          // a.click();
         };
       };
 
